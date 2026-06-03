@@ -5,6 +5,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
+from fastapi.responses import HTMLResponse
+import os
 
 # ==========================================
 # 1. SETUP LOGIKA SISTEM REKOMENDASI (AI)
@@ -115,7 +117,27 @@ async def chat_bot_endpoint(input_data: ChatInput):
         "rekomendasi_wisata": list_destinasi
     }
 
+    # ... (Kode bagian atas tetap sama sampai selesai endpoint /api/chat) ...
+
+# ==========================================
+# 3. SETUP PENYAJIAN FRONTEND (INDEX.HTML)
+# ==========================================
+
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_frontend():
+    """
+    Endpoint untuk menyajikan halaman utama (index.html) 
+    saat user membuka alamat http://127.0.0.1:8000/
+    """
+    # Memastikan file index.html berada di folder yang sama
+    if os.path.exists("index.html"):
+        with open("index.html", "r", encoding="utf-8") as f:
+            return f.read()
+    raise HTTPException(status_code=404, detail="File index.html tidak ditemukan di server.")
+
 # Untuk menjalankan server secara lokal langsung dari file ini
 if __name__ == "__main__":
     import uvicorn
+    # Mengubah host ke 0.0.0.0 agar lebih fleksibel atau tetap 127.0.0.1
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

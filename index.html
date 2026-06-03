@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Asisten Rekomendasi Wisata Indonesia</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 h-screen flex flex-col">
+
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-emerald-600 rounded-full flex items-center justify-center text-white shadow-md shadow-emerald-100">
+                <i class="fa-solid fa-compass text-lg animate-spin-slow"></i>
+            </div>
+            <div>
+                <h1 class="font-semibold text-slate-800 text-base leading-none">WisataIN</h1>
+                <span class="text-xs text-emerald-500 flex items-center gap-1 mt-1">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Mau Kemana Nih?
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <main id="chat-container" class="flex-1 overflow-y-auto p-6 space-y-6 max-w-3xl w-full mx-auto">
+        
+        <div class="flex gap-3 items-start">
+            <div class="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs shrink-0">
+                <i class="fa-solid fa-compass"></i>
+            </div>
+            <div class="bg-white border border-slate-200 text-slate-800 p-4 rounded-2xl rounded-tl-none max-w-[85%] shadow-sm text-sm leading-relaxed">
+                Halo! Kamu mau liburan ke mana kali ini? Coba ceritakan tempat seperti apa yang kamu inginkan (misal: <i>"pantai sepi"</i> atau <i>"gunung dingin berkabut"</i>). Aku akan carikan rekomendasi terbaik di Indonesia!
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 p-4 shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+        <form id="chat-form" class="max-w-3xl w-full mx-auto flex items-center gap-3 bg-slate-100 border border-slate-200 rounded-2xl px-4 py-2.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100 focus-within:bg-white transition-all">
+            
+            <input type="text" id="user-input" placeholder="Ketik preferensi wisatamu di sini..." autocomplete="off" required
+                   class="flex-1 bg-transparent border-none text-sm text-slate-800 placeholder-slate-400 focus:outline-none py-1">
+            
+            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white w-9 h-9 rounded-xl flex items-center justify-center transition shadow-md shadow-emerald-100 shrink-0">
+                <i class="fa-solid fa-paper-plane text-sm"></i>
+            </button>
+        </form>
+    </footer>
+
+    <script>
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const chatContainer = document.getElementById('chat-container');
+
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // 1. Fungsi menampilkan pesan user
+        function appendUserMessage(text) {
+            const html = `
+                <div class="flex gap-3 items-start justify-end">
+                    <div class="bg-emerald-600 text-white p-4 rounded-2xl rounded-tr-none max-w-[85%] shadow-sm text-sm">
+                        ${text}
+                    </div>
+                </div>`;
+            chatContainer.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        // 2. Fungsi menampilkan jawaban teks bot beserta kartu wisata
+        function appendBotResponse(jawabanBot, rekomendasiWisata) {
+            let kartuHtml = '';
+
+            // Jika ada rekomendasi objek wisata, buat elemen kartunya
+            if (rekomendasiWisata && rekomendasiWisata.length > 0) {
+                kartuHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 w-full">`;
+                
+                rekomendasiWisata.forEach(wisata => {
+                    // Format harga ke Rupiah sederhana
+                    const hargaFormatted = wisata.harga_tiket === 0 ? "Gratis" : `Rp ${wisata.harga_tiket.toLocaleString('id-ID')}`;
+                    // Mengubah skor menjadi persentase kecocokan
+                    const matchPercent = Math.round(wisata.skor_kemiripan * 100);
+
+                    kartuHtml += `
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition">
+                            <div>
+                                <div class="flex justify-between items-start gap-2 mb-1">
+                                    <h3 class="font-bold text-slate-800 text-sm">${wisata.nama_wisata}</h3>
+                                    <span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                        ${matchPercent}% Cocok
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 mb-2">
+                                    <i class="fa-solid fa-location-dot text-emerald-600 mr-1"></i>${wisata.kota_kabupaten}, ${wisata.provinsi}
+                                </p>
+                                <p class="text-xs text-slate-600 line-clamp-3 mb-3">${wisata.deskripsi}</p>
+                            </div>
+                            <div class="border-t border-slate-200 pt-2 mt-2 flex justify-between items-center text-[11px]">
+                                <span class="text-slate-400 font-medium">${wisata.kategori}</span>
+                                <span class="font-bold text-slate-700">${hargaFormatted}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                kartuHtml += `</div>`;
+            }
+
+            // Gabungkan teks bot dan susunan kartu rekomendasi
+            const html = `
+                <div class="flex gap-3 items-start">
+                    <div class="w-8 h-8 bg-emerald-600 rounded-full flex items-center justify-center text-white text-xs shrink-0">
+                        <i class="fa-solid fa-compass"></i>
+                    </div>
+                    <div class="w-full max-w-[85%]">
+                        <div class="bg-white border border-slate-200 text-slate-800 p-4 rounded-2xl rounded-tl-none shadow-sm text-sm leading-relaxed">
+                            ${jawabanBot}
+                            ${kartuHtml}
+                        </div>
+                    </div>
+                </div>`;
+            
+            chatContainer.insertAdjacentHTML('beforeend', html);
+            scrollToBottom();
+        }
+
+        // 3. Logika kirim data JSON ke FastAPI
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+
+            appendUserMessage(message);
+            userInput.value = '';
+
+            try {
+                // Menembak endpoint /api/chat sesuai struktur di main.py Anda
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    // Mengirim payload berbentuk objek JSON sesuai skema Pydantic ChatInput
+                    body: JSON.stringify({
+                        pesan: message,
+                        jumlah_rekomendasi: 3
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // data.jawaban_bot dan data.rekomendasi_wisata diambil dari return JSON FastAPI Anda
+                    appendBotResponse(data.jawaban_bot, data.rekomendasi_wisata);
+                } else {
+                    appendBotResponse("Waduh, terjadi kendala saat meminta rekomendasi dari sistem.", []);
+                }
+            } catch (error) {
+                appendBotResponse("Gagal terhubung ke engine rekomendasi. Pastikan script python FastAPI Anda sudah berjalan.", []);
+            }
+        });
+    </script>
+</body>
+</html>
