@@ -33,26 +33,47 @@ tfidf_matrix = tfidf.fit_transform(df['metadata'])
 
 def dapatkan_rekomendasi(user_query: str, top_n: int = 3) -> List[dict]:
     """
-    Fungsi utama untuk menghitung Cosine Similarity antara preferensi teks user
-    dengan kolom metadata seluruh tempat wisata di dataset.
+    Fungsi rekomendasi yang diperluas (Hybrid Search).
+    Bisa mendeteksi pencarian wilayah yang luas (seperti 'Kalimantan' atau 'Bali')
+    sekaligus tetap mempertahankan kecerdasan TF-IDF Cosine Similarity.
     """
-    # Mengubah input chat user menjadi vektor TF-IDF
-    query_vec = tfidf.transform([user_query.lower()])
-    
-    # Menghitung skor kemiripan menggunakan rumus Cosine Similarity
-    similarity_scores = cosine_similarity(query_vec, tfidf_matrix).flatten()
-    
-    # Membuat salinan dataframe agar tidak merusak data asli dan menyisipkan skor kemiripan
+    query_lower = user_query.lower().strip()
     df_result = df.copy()
-    df_result['score'] = similarity_scores
     
-    # Mengurutkan destinasi berdasarkan skor kemiripan tertinggi
-    rekomendasi = df_result.sort_values(by='score', ascending=False)
+    # Cek apakah user mencari nama pulau/provinsi secara umum (misal: 'kalimantan', 'papua', 'jawa')
+    # Kita scan berdasarkan kolom Provinsi dan Kota_Kabupaten
+    match_wilayah = df_result[
+        df_result['Provinsi'].str.lower().str.contains(query_lower) | 
+        df_result['Kota_Kabupaten'].str.lower().str.contains(query_lower)
+    ]
     
-    # Mengambil objek dengan skor kecocokan di atas 0 (relevan) sebanyak top_n hasil
-    rekomendasi_valid = rekomendasi[rekomendasi['score'] > 0].head(top_n)
+    # Jika ditemukan kecocokan wilayah (misal ketik 'kalimantan' dan muncul Kalbar, Kalteng, Kaltim)
+    if not match_wilayah.empty:
+        # Kita beri skor tiruan penuh (1.0) karena ini kecocokan mutlak wilayah
+        match_wilayah = match_wilayah.copy()
+        match_wilayah['score'] = 1.0
+        rekomendasi_valid = match_wilayah.head(top_n)
+        
+    # ==========================================================
+    # STRATEGI 2: TF-IDF COSINE SIMILARITY (JIKA BUKAN NAMA WILAYAH)
+    # ==========================================================
+    else:
+        # Mengubah input chat user menjadi vektor TF-IDF
+        query_vec = tfidf.transform([query_lower])
+        
+        # Menghitung skor kemiripan menggunakan rumus Cosine Similarity
+        similarity_scores = cosine_similarity(query_vec, tfidf_matrix).flatten()
+        df_result['score'] = similarity_scores
+        
+        # Mengurutkan destinasi berdasarkan skor kemiripan tertinggi
+        rekomendasi = df_result.sort_values(by='score', ascending=False)
+        
+        # Mengambil objek dengan skor kecocokan di atas 0 (relevan)
+        rekomendasi_valid = rekomendasi[rekomendasi['score'] > 0].head(top_n)
     
-    # Mengonversi hasil dataframe Pandas menjadi format List of Dictionary (siap jadi JSON)
+    # ==========================================================
+    # KERSENALAN DATA MENJADI LIST DICTIONARY (JSON)
+    # ==========================================================
     daftar_rekomendasi = []
     for _, row in rekomendasi_valid.iterrows():
         daftar_rekomendasi.append({
